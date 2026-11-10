@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Produce vs Plan Digital Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    
+    html, body {
+      height: 100vh;
+      max-height: 100vh;
+      overflow: hidden;
+      background-color: #030712;
+      color: #f3f4f6;
+      font-family: 'Chakra Petch', sans-serif;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.8) sepia(1) saturate(5) hue-rotate(160deg);
+      cursor: pointer;
+    }
+    /* บังคับสีตัวหนังสือและพื้นหลังของ Dropdown Options ให้ชัดเจน 100% */
+    select option {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+    }
+    select option:checked, select option:hover {
+      background-color: #0284c7 !important;
+      color: #ffffff !important;
+    }
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #38bdf8;
+    }
+  </style>
+</head>
+<body class="h-screen max-h-screen p-2.5 flex flex-col justify-between overflow-hidden">
+
+  <!-- TOP APP HEADER & FILTERS (SINGLE ROW COMPACT) -->
+  <header class="w-full bg-[#090e17] border border-slate-800/80 rounded-xl px-3 py-1.5 mb-2 shadow-2xl flex flex-nowrap items-center justify-between gap-2 overflow-x-auto">
+    
+    <!-- LEFT: Primary Navigation & Date Pickers -->
+    <div class="flex items-center gap-1.5 text-xs flex-nowrap shrink-0">
+      
+      <!-- Week Selector -->
+      <div class="flex items-center gap-1 bg-[#0e1726] border border-slate-700/80 rounded-lg px-2 py-1">
+        <span class="text-slate-400 font-semibold text-[11px]">Week</span>
+        <select id="weekSelect" onchange="onWeekChange()" class="bg-transparent text-cyan-400 font-bold text-xs outline-none cursor-pointer">
+          <option value="ALL">All</option>
+        </select>
+      </div>
+
+      <!-- Date Range (Calendar inputs) -->
+      <div class="flex items-center gap-1 bg-[#0e1726] border border-slate-700/80 rounded-lg px-2 py-1">
+        <span class="text-slate-400 font-semibold text-[11px] mr-0.5">Date</span>
+        <span class="text-slate-500 font-mono text-[10px]">FROM</span>
+        <input type="date" id="dateFrom" onchange="onDateRangeChange()" class="bg-slate-900/90 text-slate-100 border border-slate-700 rounded px-1 py-0.5 text-[11px] font-mono outline-none focus:border-cyan-400">
+        <span class="text-slate-500 font-mono text-[10px]">TO</span>
+        <input type="date" id="dateTo" onchange="onDateRangeChange()" class="bg-slate-900/90 text-slate-100 border border-slate-700 rounded px-1 py-0.5 text-[11px] font-mono outline-none focus:border-cyan-400">
+      </div>
+
+      <!-- Quick Date Preset Buttons -->
+      <div class="flex items-center gap-0.5 bg-[#0b121e] p-0.5 rounded-lg border border-slate-800">
+        <button onclick="setQuickDate('today')" class="px-1.5 py-0.5 rounded text-[11px] font-semibold text-slate-300 hover:text-cyan-400 hover:bg-slate-800 transition">Today</button>
+        <button onclick="setQuickDate('yesterday')" class="px-1.5 py-0.5 rounded text-[11px] font-semibold text-slate-300 hover:text-cyan-400 hover:bg-slate-800 transition">Yesterday</button>
+        <button onclick="setQuickDate('thisWeek')" class="px-1.5 py-0.5 rounded text-[11px] font-semibold text-slate-300 hover:text-cyan-400 hover:bg-slate-800 transition">This Week</button>
+        <button onclick="setQuickDate('lastWeek')" class="px-1.5 py-0.5 rounded text-[11px] font-semibold text-slate-300 hover:text-cyan-400 hover:bg-slate-800 transition">Last Week</button>
+      </div>
+
+      <!-- Plant Filter -->
+      <div class="flex items-center gap-1 bg-[#0e1726] border border-slate-700/80 rounded-lg px-2 py-1">
+        <span class="text-slate-400 font-semibold text-[11px]">Plant</span>
+        <select id="plantSelect" onchange="onPlantChange()" class="bg-transparent text-slate-200 font-medium text-xs outline-none cursor-pointer">
+          <option value="ALL">All Plants</option>
+        </select>
+      </div>
+
+      <!-- Shift Filter -->
+      <div class="flex items-center gap-1 bg-[#0e1726] border border-slate-700/80 rounded-lg px-2 py-1">
+        <span class="text-slate-400 font-semibold text-[11px]">Shift</span>
+        <select id="shiftSelect" onchange="onFilterChange()" class="bg-transparent text-slate-200 font-medium text-xs outline-none cursor-pointer">
+          <option value="ALL">All Shifts</option>
+          <option value="M">Shift 1 (M)</option>
+          <option value="A">Shift 2 (A)</option>
+          <option value="N">Shift 3 (N)</option>
+        </select>
+      </div>
+
+      <!-- Line Setting Modal Trigger -->
+      <button onclick="openLineModal()" class="flex items-center gap-1 bg-[#0e1726] hover:bg-slate-800 border border-slate-700/80 rounded-lg px-2 py-1 text-slate-200 font-medium text-xs transition">
+        <i class="fa-solid fa-sliders text-cyan-400 text-[10px]"></i>
+        <span>Line Setting</span>
+        <span id="selectedLinesBadge" class="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-full px-1 text-[10px] font-mono font-bold">ALL</span>
+      </button>
+
+      <!-- Target % Setpoint Input (Default 98%) -->
+      <div class="flex items-center gap-1 bg-[#0e1726] border border-slate-700/80 rounded-lg px-2 py-1">
+        <span class="text-slate-400 font-semibold text-[11px]">Target %</span>
+        <input type="number" id="targetSetpointInput" value="98" min="1" max="200" onchange="onSetpointChange()" class="w-10 bg-slate-900 text-cyan-300 font-mono font-bold text-center border border-slate-700 rounded px-1 py-0.5 text-xs outline-none focus:border-cyan-400">
+        <span class="text-slate-500 text-[11px]">%</span>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Status, Editable Auto-Refresh Input & Reload (IN SAME LINE) -->
+    <div class="flex items-center gap-2 shrink-0">
+      
+      <!-- Live Status Indicator -->
+      <div id="dataStatusIndicator" class="flex items-center gap-1.5 text-xs font-mono">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+        </span>
+        <span id="dataStatusText" class="text-slate-400 text-[11px]">Connecting JSONP...</span>
+      </div>
+
+      <!-- Editable Auto-refresh Interval & Countdown -->
+      <div class="flex items-center gap-1 bg-[#0e1726] border border-slate-700/80 rounded-lg px-2 py-0.5 text-xs font-mono">
+        <i class="fa-solid fa-clock-rotate-left text-cyan-400 text-[10px]"></i>
+        <input type="number" id="refreshIntervalMinutesInput" value="60" min="1" max="360" onchange="onRefreshIntervalChange()" class="w-10 bg-slate-900 text-cyan-300 font-mono font-bold text-center border border-slate-700 rounded px-1 py-0.5 text-xs outline-none focus:border-cyan-400" title="Change Auto-refresh interval (minutes)">
+        <span class="text-slate-400 text-[11px]">m</span>
+        <span id="autoRefreshCountdown" class="text-slate-400 text-[10px] ml-0.5 border-l border-slate-700/80 pl-1.5">60m 00s</span>
+      </div>
+
+      <!-- Manual Reload Button -->
+      <button onclick="fetchSheetDataJSONP(false)" class="flex items-center gap-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-700 transition">
+        <i class="fa-solid fa-rotate text-[10px]"></i>
+        <span>Reload</span>
+      </button>
+
+    </div>
+
+  </header>
+
+  <!-- MAIN DASHBOARD CARD (FLEX-1 & NO-SCROLL) -->
+  <main class="w-full flex-1 min-h-0 bg-[#090e17] border border-slate-800/80 rounded-xl p-3 shadow-2xl flex flex-col justify-between relative overflow-hidden">
+    
+    <!-- Top Action Toolbar & Scoreboard -->
+    <div class="flex flex-nowrap items-center justify-between gap-3 mb-2 border-b border-slate-800/60 pb-2 shrink-0">
+      
+      <!-- Title & Active Range Badge -->
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+          <i class="fa-solid fa-chart-simple text-xs"></i>
+        </div>
+        <h1 class="text-sm sm:text-base font-bold tracking-wider text-slate-100 uppercase">Produce vs Plan (Quantity)</h1>
+        <div id="activeRangeBadge" class="px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/30 rounded text-cyan-300 text-[11px] font-mono font-medium">
+          --
+        </div>
+      </div>
+
+      <!-- Controls & Metrics -->
+      <div class="flex items-center gap-2.5">
+        
+        <!-- Values Hide/Show Toggle -->
+        <button id="toggleValuesBtn" onclick="toggleValues()" class="flex items-center gap-1 px-2.5 py-1 bg-[#0e1726] hover:bg-slate-800 border border-slate-700 rounded-lg text-xs font-semibold text-cyan-300 transition">
+          <i id="toggleValuesIcon" class="fa-solid fa-eye text-cyan-400 text-[11px]"></i>
+          <span id="toggleValuesText">Values: ON</span>
+        </button>
+
+        <!-- Shift vs Day Switcher -->
+        <div class="flex items-center bg-[#0e1726] p-0.5 rounded-lg border border-slate-800">
+          <button id="btnModeShift" onclick="setViewMode('shift')" class="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-slate-400 hover:text-slate-100 transition">
+            <i class="fa-solid fa-layer-group text-[10px]"></i> Shift
+          </button>
+          <button id="btnModeDay" onclick="setViewMode('day')" class="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-cyan-600 text-white shadow transition">
+            <i class="fa-solid fa-calendar-day text-[10px]"></i> Day
+          </button>
+        </div>
+
+        <!-- Total Plan Badge -->
+        <div class="flex items-center gap-1.5 bg-[#0e1726] border border-slate-800/80 rounded-lg px-2.5 py-0.5">
+          <span class="text-slate-400 text-xs font-semibold">Total Plan:</span>
+          <span id="metricTotalPlan" class="text-cyan-400 font-mono font-bold text-xs sm:text-sm">0.0</span>
+        </div>
+
+        <!-- Total Actual Badge -->
+        <div class="flex items-center gap-1.5 bg-[#0e1726] border border-slate-800/80 rounded-lg px-2.5 py-0.5">
+          <span class="text-slate-400 text-xs font-semibold">Total Actual:</span>
+          <span id="metricTotalActual" class="text-emerald-400 font-mono font-bold text-xs sm:text-sm">0.0</span>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- CHART CANVAS CONTAINER (FLEX-1 FULLY RESPONSIVE) -->
+    <div class="w-full flex-1 min-h-0 relative">
+      <canvas id="productionChart"></canvas>
+    </div>
+
+    <!-- LEGEND & FOOTER SUMMARY (COMPACT) -->
+    <footer class="w-full pt-1.5 mt-1 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
+      
+      <!-- Left: Status Legend -->
+      <div class="flex items-center gap-3.5 text-slate-400 font-medium text-[11px]">
+        <div class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 bg-[#00e676] rounded-sm border border-white"></span>
+          <span class="text-slate-300">≥ <span id="legendSetpointText">98</span>% (Pass)</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 bg-[#ff3b30] rounded-sm border border-white"></span>
+          <span class="text-slate-300">&lt; <span id="legendSetpointBelowText">98</span>% (Below)</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-3.5 h-1 bg-[#00f0ff] rounded-sm shadow-[0_0_8px_#00f0ff]"></span>
+          <span class="text-cyan-300 font-semibold">— Target Notch (Plan)</span>
+        </div>
+        <span class="text-slate-500 font-mono italic text-[10px]" id="legendModeDesc">1 Combined Bar per Line</span>
+      </div>
+
+      <!-- Right: Grand Totals -->
+      <div class="text-slate-400 font-mono text-xs">
+        Total Output: <span id="footerTotalRatio" class="text-slate-200 font-bold">0.0 / 0.0</span> 
+        <span id="footerPercentageBadge" class="ml-1 text-emerald-400 font-bold">(0%)</span>
+      </div>
+
+    </footer>
+
+  </main>
+
+  <!-- LINE SETTING POPUP MODAL -->
+  <div id="lineModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#0b1320] border border-slate-700/80 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-industry text-cyan-400 text-sm"></i>
+          <h2 class="text-slate-100 font-bold text-sm tracking-wide">Filter Production Lines</h2>
+        </div>
+        <button onclick="closeLineModal()" class="text-slate-400 hover:text-slate-200 text-sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="px-5 py-2.5 bg-[#080d16] border-b border-slate-800/80 flex items-center justify-between text-xs">
+        <span class="text-slate-400">Selected Lines: <strong id="modalSelectedCount" class="text-cyan-400 font-mono">0</strong></span>
+        <div class="flex items-center gap-2">
+          <button onclick="modalSelectAll(true)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700">Select All</button>
+          <button onclick="modalSelectAll(false)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700">Deselect All</button>
+        </div>
+      </div>
+
+      <div id="modalLineCheckboxes" class="p-5 overflow-y-auto space-y-4 text-xs">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="p-4 border-t border-slate-800 bg-[#080d16] flex justify-end gap-2">
+        <button onclick="closeLineModal()" class="px-4 py-1.5 rounded-lg text-slate-300 hover:bg-slate-800 font-semibold text-xs border border-slate-700">Cancel</button>
+        <button onclick="applyLineModal()" class="px-5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg shadow-cyan-900/30">Apply Filter</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- APPLICATION SCRIPTS -->
+  <script>
+    // --- 1. CONFIGURATION & STATE ---
+    const SHEET_DOC_ID = '10p7sU2-9dpdeqZqnj3aoW7IOncCwqUrBeql5HrPxyJs';
+    const SHEET_GID = '0';
+
+    let rawRecords = [];
+    let availableWeeks = [];
+    let availableDates = [];
+    let lineToPlantMap = {};
+    let allPlants = [];
+    let allLines = [];
+    let selectedLines = new Set();
+    let tempSelectedLines = new Set();
+
+    let viewMode = 'day'; // 'shift' or 'day'
+    let showValues = true;
+    let targetSetpoint = 98.0; // Default 98%
+    let chartInstance = null;
+    let isInitialLoad = true;
+
+    // Editable Auto-refresh config (Default: 60 minutes)
+    let refreshIntervalMinutes = 60;
+    let secondsUntilRefresh = refreshIntervalMinutes * 60;
+    let refreshTimerInterval = null;
+
+    // --- 2. INITIALIZATION ---
+    window.addEventListener('DOMContentLoaded', () => {
+      initChart();
+      fetchSheetDataJSONP(true);
+      startAutoRefreshTimer();
+    });
+
+    // --- 3. GOOGLE VISUALIZATION API VIA JSONP (Zero CORS Block) ---
+    function fetchSheetDataJSONP(isInitial = false) {
+      const statusEl = document.getElementById('dataStatusText');
+      if (isInitial) {
+        statusEl.innerHTML = `<span class="text-cyan-400"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Loading...</span>`;
+      }
+
+      window.handleGoogleGVIZResponse = function(response) {
+        try {
+          if (!response || !response.table) {
+            throw new Error('Malformed GVIZ response');
+          }
+          parseGVIZTable(response.table);
+          statusEl.innerHTML = `<span class="text-emerald-400 font-mono"><i class="fa-solid fa-circle-check mr-1"></i>Live: ${rawRecords.length.toLocaleString()} rows</span>`;
+          
+          if (isInitialLoad) {
+            populateFilters();
+            setQuickDate('today');
+            isInitialLoad = false;
+          } else {
+            // Background refresh: locks page and user selections, updates only graph
+            applyAndRender();
+          }
+
+          secondsUntilRefresh = refreshIntervalMinutes * 60;
+          updateRefreshDisplay();
+        } catch (err) {
+          console.error('GVIZ Parsing Error:', err);
+          statusEl.innerHTML = `<span class="text-rose-400 font-mono"><i class="fa-solid fa-circle-exclamation mr-1"></i>Parse Failed</span>`;
+        }
+      };
+
+      const oldScript = document.getElementById('gviz-jsonp-script');
+      if (oldScript) oldScript.remove();
+
+      const script = document.createElement('script');
+      script.id = 'gviz-jsonp-script';
+      script.src = `https://docs.google.com/spreadsheets/d/${SHEET_DOC_ID}/gviz/tq?tqx=responseHandler:handleGoogleGVIZResponse&gid=${SHEET_GID}&headers=1`;
+      
+      script.onerror = function() {
+        console.error('JSONP Injection Failed');
+        statusEl.innerHTML = `<span class="text-rose-400 font-mono"><i class="fa-solid fa-circle-exclamation mr-1"></i>Load Failed</span>`;
+      };
+
+      document.body.appendChild(script);
+    }
+
+    // Editable Refresh Interval Handler
+    function onRefreshIntervalChange() {
+      const val = parseInt(document.getElementById('refreshIntervalMinutesInput').value, 10);
+      if (!isNaN(val) && val >= 1) {
+        refreshIntervalMinutes = val;
+        secondsUntilRefresh = val * 60;
+        updateRefreshDisplay();
+      }
+    }
+
+    function startAutoRefreshTimer() {
+      if (refreshTimerInterval) clearInterval(refreshTimerInterval);
+      refreshTimerInterval = setInterval(() => {
+        secondsUntilRefresh--;
+        if (secondsUntilRefresh <= 0) {
+          secondsUntilRefresh = refreshIntervalMinutes * 60;
+          fetchSheetDataJSONP(false); // Silent background refresh
+        }
+        updateRefreshDisplay();
+      }, 1000);
+    }
+
+    function updateRefreshDisplay() {
+      const el = document.getElementById('autoRefreshCountdown');
+      if (!el) return;
+      const m = Math.floor(secondsUntilRefresh / 60);
+      const s = secondsUntilRefresh % 60;
+      el.innerText = `${m}m ${String(s).padStart(2, '0')}s`;
+    }
+
+    function parseGVIZTable(table) {
+      const cols = table.cols.map(c => (c.label || '').trim().toUpperCase());
+      
+      const colMap = {
+        date: cols.findIndex(h => h.includes('DATE')),
+        week: cols.findIndex(h => h === 'WEEK' || h.includes('WEEK')),
+        plant: cols.findIndex(h => h === 'PLANT'),
+        line: cols.findIndex(h => h === 'LINE' || h.includes('RESOURCE')),
+        shift: cols.findIndex(h => h === 'SHIFT'),
+        plan: cols.findIndex(h => h === 'PLAN'),
+        actual: cols.findIndex(h => h === 'ACTUAL')
+      };
+
+      if (colMap.date === -1) colMap.date = 0;
+      if (colMap.week === -1) colMap.week = 1;
+      if (colMap.plant === -1) colMap.plant = 2;
+      if (colMap.line === -1) colMap.line = 3;
+      if (colMap.shift === -1) colMap.shift = 4;
+      if (colMap.plan === -1) colMap.plan = 5;
+      if (colMap.actual === -1) colMap.actual = 6;
+
+      rawRecords = [];
+      const plantSet = new Set();
+      const lineSet = new Set();
+      lineToPlantMap = {};
+
+      table.rows.forEach(row => {
+        const c = row.c;
+        if (!c) return;
+
+        const getCellVal = (idx) => {
+          if (!c[idx]) return '';
+          return (c[idx].v !== null && c[idx].v !== undefined) ? c[idx].v : (c[idx].f || '');
+        };
+        const getCellFormatted = (idx) => {
+          if (!c[idx]) return '';
+          return c[idx].f || (c[idx].v !== null && c[idx].v !== undefined ? String(c[idx].v) : '');
+        };
+
+        const rawDate = getCellFormatted(colMap.date) || String(getCellVal(colMap.date));
+        const isoDate = normalizeDate(rawDate);
+        const week = parseInt(getCellVal(colMap.week), 10) || 0;
+        const plant = String(getCellVal(colMap.plant) || 'UNKNOWN').trim();
+        const line = String(getCellVal(colMap.line) || '').trim();
+        const shiftRaw = String(getCellVal(colMap.shift) || 'M').trim().toUpperCase();
+        const plan = parseFloat(String(getCellVal(colMap.plan) || '0').replace(/,/g, '')) || 0;
+        const actual = parseFloat(String(getCellVal(colMap.actual) || '0').replace(/,/g, '')) || 0;
+
+        if (!line) return;
+
+        let shift = 'M';
+        if (shiftRaw.startsWith('A') || shiftRaw === '2') shift = 'A';
+        else if (shiftRaw.startsWith('N') || shiftRaw === '3') shift = 'N';
+
+        rawRecords.push({
+          rawDate,
+          isoDate,
+          week,
+          plant,
+          line,
+          shift,
+          plan,
+          actual
+        });
+
+        plantSet.add(plant);
+        lineSet.add(line);
+        if (!lineToPlantMap[line]) {
+          lineToPlantMap[line] = plant;
+        }
+      });
+
+      allPlants = Array.from(plantSet).sort();
+      allLines = Array.from(lineSet).sort();
+      if (isInitialLoad) {
+        selectedLines = new Set(allLines);
+      }
+    }
+
+    function normalizeDate(str) {
+      if (!str) return '';
+      str = String(str).trim();
+
+      const gvizDateMatch = str.match(/Date\((\d{4}),\s*(\d{1,2}),\s*(\d{1,2})\)/);
+      if (gvizDateMatch) {
+        const y = gvizDateMatch[1];
+        const m = String(parseInt(gvizDateMatch[2], 10) + 1).padStart(2, '0');
+        const d = gvizDateMatch[3].padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+
+      const months = { JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06', JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12' };
+      const mmmMatch = str.match(/^(\d{1,2})[-/ ]([A-Za-z]{3})[-/ ](\d{2,4})$/);
+      if (mmmMatch) {
+        const day = mmmMatch[1].padStart(2, '0');
+        const mon = months[mmmMatch[2].toUpperCase()] || '01';
+        let yr = mmmMatch[3];
+        if (yr.length === 2) yr = '20' + yr;
+        return `${yr}-${mon}-${day}`;
+      }
+
+      const dmyMatch = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+      if (dmyMatch) {
+        const day = dmyMatch[1].padStart(2, '0');
+        const mon = dmyMatch[2].padStart(2, '0');
+        let yr = dmyMatch[3];
+        if (yr.length === 2) yr = '20' + yr;
+        return `${yr}-${mon}-${day}`;
+      }
+
+      return str;
+    }
+
+    // --- 4. POPULATE CONTROLS ---
+    function populateFilters() {
+      const weekSet = new Set(rawRecords.map(r => r.week).filter(w => w > 0));
+      availableWeeks = Array.from(weekSet).sort((a, b) => a - b);
+      const weekSelect = document.getElementById('weekSelect');
+      weekSelect.innerHTML = `<option value="ALL">All</option>`;
+      availableWeeks.forEach(w => {
+        weekSelect.innerHTML += `<option value="${w}">Week ${w}</option>`;
+      });
+
+      const plantSelect = document.getElementById('plantSelect');
+      plantSelect.innerHTML = `<option value="ALL">All Plants</option>`;
+      allPlants.forEach(p => {
+        plantSelect.innerHTML += `<option value="${p}">${p}</option>`;
+      });
+
+      const dateSet = new Set(rawRecords.map(r => r.isoDate).filter(d => Boolean(d)));
+      availableDates = Array.from(dateSet).sort();
+
+      updateLineBadge();
+    }
+
+    // --- 5. QUICK DATE PRESETS ---
+    function setQuickDate(type) {
+      const now = new Date();
+      const formatDate = (d) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      };
+
+      let fromStr = '';
+      let toStr = '';
+
+      if (type === 'today') {
+        fromStr = toStr = formatDate(now);
+      } else if (type === 'yesterday') {
+        const yest = new Date(now);
+        yest.setDate(yest.getDate() - 1);
+        fromStr = toStr = formatDate(yest);
+      } else if (type === 'thisWeek') {
+        const d = new Date(now);
+        const dayOfWeek = d.getDay();
+        const diffToMon = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+        const mon = new Date(d);
+        mon.setDate(d.getDate() + diffToMon);
+        const sun = new Date(mon);
+        sun.setDate(mon.getDate() + 6);
+        fromStr = formatDate(mon);
+        toStr = formatDate(sun);
+      } else if (type === 'lastWeek') {
+        const d = new Date(now);
+        const dayOfWeek = d.getDay();
+        const diffToMon = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek - 7;
+        const mon = new Date(d);
+        mon.setDate(d.getDate() + diffToMon);
+        const sun = new Date(mon);
+        sun.setDate(mon.getDate() + 6);
+        fromStr = formatDate(mon);
+        toStr = formatDate(sun);
+      }
+
+      document.getElementById('dateFrom').value = fromStr;
+      document.getElementById('dateTo').value = toStr;
+
+      syncWeekFromDate(fromStr);
+      document.getElementById('shiftSelect').value = 'ALL';
+
+      applyAndRender();
+    }
+
+    function syncWeekFromDate(dateStr) {
+      const rec = rawRecords.find(r => r.isoDate === dateStr && r.week > 0);
+      const weekSelect = document.getElementById('weekSelect');
+      if (rec && rec.week) {
+        weekSelect.value = String(rec.week);
+      } else {
+        weekSelect.value = 'ALL';
+      }
+    }
+
+    function onWeekChange() {
+      const wVal = document.getElementById('weekSelect').value;
+      if (wVal !== 'ALL') {
+        const wNum = parseInt(wVal, 10);
+        const recsInWeek = rawRecords.filter(r => r.week === wNum && Boolean(r.isoDate));
+        if (recsInWeek.length > 0) {
+          const datesInWeek = recsInWeek.map(r => r.isoDate).sort();
+          document.getElementById('dateFrom').value = datesInWeek[0];
+          document.getElementById('dateTo').value = datesInWeek[datesInWeek.length - 1];
+        }
+      }
+      applyAndRender();
+    }
+
+    function onDateRangeChange() {
+      const fromStr = document.getElementById('dateFrom').value;
+      syncWeekFromDate(fromStr);
+      applyAndRender();
+    }
+
+    function onPlantChange() {
+      const pVal = document.getElementById('plantSelect').value;
+      if (pVal === 'ALL') {
+        selectedLines = new Set(allLines);
+      } else {
+        selectedLines = new Set(allLines.filter(line => lineToPlantMap[line] === pVal));
+      }
+      updateLineBadge();
+      applyAndRender();
+    }
+
+    function onFilterChange() {
+      applyAndRender();
+    }
+
+    function onSetpointChange() {
+      const val = parseFloat(document.getElementById('targetSetpointInput').value);
+      if (!isNaN(val) && val > 0) {
+        targetSetpoint = val;
+        document.getElementById('legendSetpointText').innerText = val;
+        document.getElementById('legendSetpointBelowText').innerText = val;
+        applyAndRender();
+      }
+    }
+
+    function setViewMode(mode) {
+      viewMode = mode;
+      const btnShift = document.getElementById('btnModeShift');
+      const btnDay = document.getElementById('btnModeDay');
+      const legendDesc = document.getElementById('legendModeDesc');
+
+      if (mode === 'shift') {
+        btnShift.className = 'flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-cyan-600 text-white shadow transition';
+        btnDay.className = 'flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-slate-400 hover:text-slate-100 transition';
+        legendDesc.innerText = 'Bars per Line: Shift 1 (M) → Shift 2 (A) → Shift 3 (N)';
+      } else {
+        btnDay.className = 'flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-cyan-600 text-white shadow transition';
+        btnShift.className = 'flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-slate-400 hover:text-slate-100 transition';
+        legendDesc.innerText = '1 Combined Bar per Line (Sum of all selected dates & shifts)';
+      }
+      applyAndRender();
+    }
+
+    function toggleValues() {
+      showValues = !showValues;
+      const icon = document.getElementById('toggleValuesIcon');
+      const text = document.getElementById('toggleValuesText');
+      const btn = document.getElementById('toggleValuesBtn');
+
+      if (showValues) {
+        icon.className = 'fa-solid fa-eye text-cyan-400 text-[11px]';
+        text.innerText = 'Values: ON';
+        btn.classList.add('text-cyan-300');
+        btn.classList.remove('text-slate-400');
+      } else {
+        icon.className = 'fa-solid fa-eye-slash text-slate-400 text-[11px]';
+        text.innerText = 'Values: OFF';
+        btn.classList.remove('text-cyan-300');
+        btn.classList.add('text-slate-400');
+      }
+      chartInstance.update();
+    }
+
+    // --- 6. LINE MODAL LOGIC ---
+    function openLineModal() {
+      tempSelectedLines = new Set(selectedLines);
+      const container = document.getElementById('modalLineCheckboxes');
+      container.innerHTML = '';
+
+      const plantGroups = {};
+      allLines.forEach(line => {
+        const plant = lineToPlantMap[line] || 'OTHER';
+        if (!plantGroups[plant]) plantGroups[plant] = [];
+        plantGroups[plant].push(line);
+      });
+
+      Object.keys(plantGroups).sort().forEach(plant => {
+        const lines = plantGroups[plant];
+        let groupHTML = `
+          <div class="bg-[#0f172a]/70 border border-slate-800 rounded-xl p-3">
+            <div class="flex items-center justify-between border-b border-slate-800/80 pb-2 mb-2">
+              <span class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Plant: ${plant} (${lines.length} lines)</span>
+              <button onclick="modalToggleGroup('${plant}', true)" class="text-[11px] text-slate-400 hover:text-slate-200">Select All</button>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+        `;
+
+        lines.forEach(line => {
+          const isChecked = tempSelectedLines.has(line);
+          groupHTML += `
+            <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white">
+              <input type="checkbox" data-plant="${plant}" value="${line}" ${isChecked ? 'checked' : ''} onchange="modalOnCheckboxChange(this)" class="rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-0">
+              <span class="truncate">${line}</span>
+            </label>
+          `;
+        });
+
+        groupHTML += `</div></div>`;
+        container.innerHTML += groupHTML;
+      });
+
+      updateModalCount();
+      document.getElementById('lineModal').classList.remove('hidden');
+    }
+
+    function modalOnCheckboxChange(cb) {
+      if (cb.checked) tempSelectedLines.add(cb.value);
+      else tempSelectedLines.delete(cb.value);
+      updateModalCount();
+    }
+
+    function modalToggleGroup(plant, selectAll) {
+      const checkboxes = document.querySelectorAll(`#modalLineCheckboxes input[data-plant="${plant}"]`);
+      checkboxes.forEach(cb => {
+        cb.checked = selectAll;
+        if (selectAll) tempSelectedLines.add(cb.value);
+        else tempSelectedLines.delete(cb.value);
+      });
+      updateModalCount();
+    }
+
+    function modalSelectAll(selectAll) {
+      const checkboxes = document.querySelectorAll('#modalLineCheckboxes input[type="checkbox"]');
+      checkboxes.forEach(cb => {
+        cb.checked = selectAll;
+        if (selectAll) tempSelectedLines.add(cb.value);
+        else tempSelectedLines.delete(cb.value);
+      });
+      updateModalCount();
+    }
+
+    function updateModalCount() {
+      document.getElementById('modalSelectedCount').innerText = `${tempSelectedLines.size} / ${allLines.length}`;
+    }
+
+    function closeLineModal() {
+      document.getElementById('lineModal').classList.add('hidden');
+    }
+
+    function applyLineModal() {
+      selectedLines = new Set(tempSelectedLines);
+      closeLineModal();
+      updateLineBadge();
+      applyAndRender();
+    }
+
+    function updateLineBadge() {
+      const badge = document.getElementById('selectedLinesBadge');
+      if (selectedLines.size === allLines.length) {
+        badge.innerText = `ALL (${allLines.length})`;
+      } else {
+        badge.innerText = `${selectedLines.size} / ${allLines.length}`;
+      }
+    }
+
+    // --- 7. CORE AGGREGATION & RENDERING LOGIC ---
+    function applyAndRender() {
+      if (!rawRecords.length) return;
+
+      const weekVal = document.getElementById('weekSelect').value;
+      const fromStr = document.getElementById('dateFrom').value;
+      const toStr = document.getElementById('dateTo').value;
+      const plantVal = document.getElementById('plantSelect').value;
+      const shiftVal = document.getElementById('shiftSelect').value;
+
+      const activeRangeBadge = document.getElementById('activeRangeBadge');
+      if (fromStr && toStr) {
+        activeRangeBadge.innerText = (fromStr === toStr) ? fromStr : `${fromStr} → ${toStr}`;
+      } else if (weekVal !== 'ALL') {
+        activeRangeBadge.innerText = `Week ${weekVal}`;
+      } else {
+        activeRangeBadge.innerText = `All Data`;
+      }
+
+      const filtered = rawRecords.filter(r => {
+        if (!selectedLines.has(r.line)) return false;
+        if (plantVal !== 'ALL' && r.plant !== plantVal) return false;
+        if (shiftVal !== 'ALL' && r.shift !== shiftVal) return false;
+
+        if (fromStr && toStr) {
+          if (r.isoDate) {
+            if (r.isoDate < fromStr || r.isoDate > toStr) return false;
+          } else if (weekVal !== 'ALL') {
+            if (r.week !== parseInt(weekVal, 10)) return false;
+          }
+        } else if (weekVal !== 'ALL') {
+          if (r.week !== parseInt(weekVal, 10)) return false;
+        }
+
+        return true;
+      });
+
+      const activeLines = Array.from(selectedLines).sort((a, b) => {
+        const plantA = lineToPlantMap[a] || '';
+        const plantB = lineToPlantMap[b] || '';
+        if (plantA !== plantB) return plantA.localeCompare(plantB);
+        return a.localeCompare(b);
+      });
+
+      const labels = [];
+      const actualValues = [];
+      const planValues = [];
+      const barColors = [];
+      const borderColors = [];
+      const customTooltips = [];
+
+      let totalPlanSum = 0;
+      let totalActualSum = 0;
+      let globalMaxVal = 0;
+
+      if (viewMode === 'day') {
+        activeLines.forEach(line => {
+          const recs = filtered.filter(r => r.line === line);
+          const sumPlan = recs.reduce((acc, c) => acc + c.plan, 0);
+          const sumActual = recs.reduce((acc, c) => acc + c.actual, 0);
+
+          totalPlanSum += sumPlan;
+          totalActualSum += sumActual;
+          if (sumPlan > globalMaxVal) globalMaxVal = sumPlan;
+          if (sumActual > globalMaxVal) globalMaxVal = sumActual;
+
+          const pct = sumPlan > 0 ? (sumActual / sumPlan) * 100 : (sumActual > 0 ? 100 : 0);
+          const isPass = pct >= targetSetpoint;
+
+          labels.push(line);
+          actualValues.push(sumActual);
+          planValues.push(sumPlan);
+          barColors.push(isPass ? '#00e676' : '#ff3b30');
+          borderColors.push('#ffffff');
+
+          customTooltips.push({
+            line,
+            subTitle: `Plant: ${lineToPlantMap[line] || '-'}`,
+            actual: sumActual,
+            plan: sumPlan,
+            pct: sumPlan > 0 ? pct.toFixed(1) + '%' : '-'
+          });
+        });
+
+      } else {
+        const shifts = (shiftVal === 'ALL') ? ['M', 'A', 'N'] : [shiftVal];
+        const shiftNames = { M: 'Shift 1 (M)', A: 'Shift 2 (A)', N: 'Shift 3 (N)' };
+
+        activeLines.forEach((line, lineIdx) => {
+          shifts.forEach((sh, shIdx) => {
+            const recs = filtered.filter(r => r.line === line && r.shift === sh);
+            const sumPlan = recs.reduce((acc, c) => acc + c.plan, 0);
+            const sumActual = recs.reduce((acc, c) => acc + c.actual, 0);
+
+            totalPlanSum += sumPlan;
+            totalActualSum += sumActual;
+            if (sumPlan > globalMaxVal) globalMaxVal = sumPlan;
+            if (sumActual > globalMaxVal) globalMaxVal = sumActual;
+
+            const pct = sumPlan > 0 ? (sumActual / sumPlan) * 100 : (sumActual > 0 ? 100 : 0);
+            const isPass = pct >= targetSetpoint;
+
+            const isMiddleShift = (shifts.length === 3 && shIdx === 1) || (shifts.length === 1);
+            labels.push(isMiddleShift ? line : '');
+
+            actualValues.push(sumActual);
+            planValues.push(sumPlan);
+            barColors.push(isPass ? '#00e676' : '#ff3b30');
+            borderColors.push('#ffffff');
+
+            customTooltips.push({
+              line,
+              subTitle: `${shiftNames[sh]} | Plant: ${lineToPlantMap[line] || '-'}`,
+              actual: sumActual,
+              plan: sumPlan,
+              pct: sumPlan > 0 ? pct.toFixed(1) + '%' : '-'
+            });
+          });
+
+          if (shifts.length > 1 && lineIdx < activeLines.length - 1) {
+            labels.push('');
+            actualValues.push(null);
+            planValues.push(null);
+            barColors.push('transparent');
+            borderColors.push('transparent');
+            customTooltips.push(null);
+          }
+        });
+      }
+
+      // Update Badges
+      document.getElementById('metricTotalPlan').innerText = totalPlanSum.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      document.getElementById('metricTotalActual').innerText = totalActualSum.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      document.getElementById('footerTotalRatio').innerText = `${totalActualSum.toLocaleString('en-US', { maximumFractionDigits: 1 })} / ${totalPlanSum.toLocaleString('en-US', { maximumFractionDigits: 1 })}`;
+      
+      const overallPct = totalPlanSum > 0 ? ((totalActualSum / totalPlanSum) * 100).toFixed(1) : '0';
+      const pctBadge = document.getElementById('footerPercentageBadge');
+      pctBadge.innerText = `(${overallPct}%)`;
+      pctBadge.className = (parseFloat(overallPct) >= targetSetpoint) ? 'ml-1 text-emerald-400 font-bold' : 'ml-1 text-rose-400 font-bold';
+
+      const paddedMax = globalMaxVal > 0 ? Math.ceil(globalMaxVal * 1.15) : 100;
+      chartInstance.options.scales.y.max = paddedMax;
+
+      chartInstance.data.labels = labels;
+      chartInstance.data.datasets[0].data = actualValues;
+      chartInstance.data.datasets[0].backgroundColor = barColors;
+      chartInstance.data.datasets[0].borderColor = borderColors;
+      chartInstance.data.datasets[0].planData = planValues;
+      chartInstance.data.datasets[0].customTooltips = customTooltips;
+
+      chartInstance.update();
+    }
+
+    // --- 8. CHART.JS CONFIGURATION (COLLISION DETECTION & REMOVAL OF FLOATING DASHES) ---
+    function initChart() {
+      const ctx = document.getElementById('productionChart').getContext('2d');
+
+      const targetNotchAndTextPlugin = {
+        id: 'targetNotchAndTextPlugin',
+        afterDatasetsDraw(chart) {
+          if (!showValues) return;
+          const { ctx, scales: { x, y } } = chart;
+          const dataset = chart.data.datasets[0];
+          const meta = chart.getDatasetMeta(0);
+
+          if (!meta || !meta.data) return;
+
+          ctx.save();
+
+          // 1. Draw Target Notches (—) only if Plan > 0
+          meta.data.forEach((bar, index) => {
+            const actualVal = dataset.data[index];
+            const planVal = dataset.planData ? dataset.planData[index] : null;
+
+            if (actualVal === null || planVal === null || planVal === undefined) return;
+
+            const barX = bar.x;
+            const barWidth = bar.width || 18;
+            const halfWidth = Math.max(barWidth * 0.7, 10);
+
+            if (planVal > 0) {
+              const planY = y.getPixelForValue(planVal);
+
+              ctx.shadowColor = '#00f0ff';
+              ctx.shadowBlur = 8;
+              ctx.strokeStyle = '#00f0ff';
+              ctx.lineWidth = 4;
+              ctx.lineCap = 'round';
+
+              ctx.beginPath();
+              ctx.moveTo(barX - halfWidth, planY);
+              ctx.lineTo(barX + halfWidth, planY);
+              ctx.stroke();
+
+              ctx.shadowBlur = 0;
+            }
+          });
+
+          // 2. Prepare items for Floating % Labels
+          const labelItems = [];
+          meta.data.forEach((bar, index) => {
+            const actualVal = dataset.data[index];
+            const planVal = dataset.planData ? dataset.planData[index] : null;
+
+            if (actualVal === null || planVal === null || planVal === undefined) return;
+
+            // แก้ปัญหาจุดประขีดลอย: ซ่อนป้ายทันทีหากเครื่องจักรไม่มีทั้งยอด Actual และ Plan ในกะนั้น
+            if (actualVal === 0 && planVal === 0) return;
+
+            const pct = planVal > 0 ? (actualVal / planVal) * 100 : (actualVal > 0 ? 100 : 0);
+            const isPass = pct >= targetSetpoint;
+            const pctText = planVal > 0 ? `${Math.round(pct)}%` : `>100%`;
+
+            const actualY = y.getPixelForValue(actualVal || 0);
+            const planY = planVal > 0 ? y.getPixelForValue(planVal) : actualY;
+            const baseY = Math.min(actualY, planY) - 10;
+
+            labelItems.push({
+              index,
+              x: bar.x,
+              baseY: baseY,
+              renderY: baseY,
+              text: pctText,
+              color: isPass ? '#00e676' : '#ff3b30',
+              hasCollision: false,
+              anchorY: Math.min(actualY, planY)
+            });
+          });
+
+          // 3. Collision Detection & Staggered Separation
+          const HORIZONTAL_COLLISION_DIST = 34;
+          const VERTICAL_COLLISION_DIST = 14;
+          const STAGGER_LIFT = 18;
+
+          for (let i = 0; i < labelItems.length - 1; i++) {
+            const cur = labelItems[i];
+            const next = labelItems[i + 1];
+
+            const dx = Math.abs(next.x - cur.x);
+            const dy = Math.abs(next.renderY - cur.renderY);
+
+            if (dx < HORIZONTAL_COLLISION_DIST && dy < VERTICAL_COLLISION_DIST) {
+              cur.hasCollision = true;
+              next.hasCollision = true;
+              next.renderY = cur.renderY - STAGGER_LIFT;
+            }
+          }
+
+          // 4. Render Leader Pointer Lines and Text
+          ctx.font = 'bold 11px "JetBrains Mono", monospace';
+          ctx.textAlign = 'center';
+
+          labelItems.forEach(item => {
+            if (item.hasCollision && item.renderY < item.baseY - 5) {
+              ctx.beginPath();
+              ctx.strokeStyle = item.color;
+              ctx.lineWidth = 1.2;
+              ctx.setLineDash([2, 2]); // Dotted leader line
+              ctx.moveTo(item.x, item.renderY + 4);
+              ctx.lineTo(item.x, item.anchorY - 2);
+              ctx.stroke();
+              ctx.setLineDash([]);
+            }
+
+            ctx.fillStyle = item.color;
+            ctx.fillText(item.text, item.x, item.renderY);
+          });
+
+          ctx.restore();
+        }
+      };
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: [],
+          datasets: [{
+            data: [],
+            backgroundColor: [],
+            borderColor: [],
+            borderWidth: 1.5,
+            borderRadius: 3,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 350 },
+          layout: {
+            padding: { top: 32, bottom: 2, left: 6, right: 6 }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              enabled: true,
+              backgroundColor: '#090e17',
+              borderColor: '#1e293b',
+              borderWidth: 1,
+              titleFont: { family: 'Chakra Petch', size: 12, weight: 'bold' },
+              bodyFont: { family: 'JetBrains Mono', size: 11 },
+              padding: 10,
+              displayColors: false,
+              callbacks: {
+                title: function(items) {
+                  const idx = items[0].dataIndex;
+                  const item = chartInstance.data.datasets[0].customTooltips[idx];
+                  return item ? item.line : '';
+                },
+                label: function(item) {
+                  const info = chartInstance.data.datasets[0].customTooltips[item.dataIndex];
+                  if (!info) return [];
+                  return [
+                    info.subTitle,
+                    `Plan Target: ${info.plan.toLocaleString('en-US')}`,
+                    `Actual Output: ${info.actual.toLocaleString('en-US')}`,
+                    `Achievement: ${info.pct}`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: {
+                color: '#94a3b8',
+                font: { family: 'Chakra Petch', size: 10, weight: '500' },
+                maxRotation: 45,
+                minRotation: 45,
+                autoSkip: false
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(30, 41, 59, 0.45)' },
+              ticks: {
+                color: '#64748b',
+                font: { family: 'JetBrains Mono', size: 10 },
+                callback: v => (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v)
+              }
+            }
+          }
+        },
+        plugins: [targetNotchAndTextPlugin]
+      });
+    }
+  </script>
+</body>
+</html>
